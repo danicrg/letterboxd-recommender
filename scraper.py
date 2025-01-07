@@ -1,12 +1,11 @@
-from bs4 import BeautifulSoup
-import requests
+from playwright.sync_api import sync_playwright
 import pandas as pd
 
 DOMAIN = "https://letterboxd.com"
 
 def transform_ratings(some_str):
     """
-    transforms raw star rating into float value
+    Transforms raw star rating into float value
     :param: some_str: actual star rating
     :rtype: returns the float representation of the given star(s)
     """
@@ -22,48 +21,59 @@ def transform_ratings(some_str):
         "★★★½": 3.5,
         "★★★★½": 4.5
     }
-    try:
-        return stars[some_str]
-    except:
-        return -1
+    return stars.get(some_str, -1)
 
 def scrape_user(username):
-    movies_dict = {}
-    movies_dict['id'] = []
-    movies_dict['title'] = []
-    movies_dict['rating'] = []
-    movies_dict['liked'] = []
-    movies_dict['link'] = []
-    url = DOMAIN + "/" + username + "/films/"
-    url_page = requests.get(url)
-    soup = BeautifulSoup(url_page.content, 'html.parser')
-
-    # check number of pages
-    li_pagination = soup.findAll("li", {"class": "paginate-page"})
-    if len(li_pagination) == 0:
-        ul = soup.find("ul", {"class": "poster-list"})
-        if (ul != None):
-            movies = ul.find_all("li")
-            for movie in movies:
-                movies_dict['id'].append(movie.find('div')['data-film-id'])
-                movies_dict['title'].append(movie.find('img')['alt'])
-                movies_dict['rating'].append(transform_ratings(movie.find('p', {"class": "poster-viewingdata"}).get_text().strip()))
-                movies_dict['liked'].append(movie.find('span', {'class': 'like'})!=None)
-                movies_dict['link'].append(movie.find('div')['data-target-link'])
-    else:
-        for i in range(int(li_pagination[-1].find('a').get_text().strip())):
-            url = DOMAIN + "/" + username + "/films/page/" + str(i+1)
-            url_page = requests.get(url)
-            soup = BeautifulSoup(url_page.content, 'html.parser')
-            ul = soup.find("ul", {"class": "poster-list"})
-            if (ul != None):
-                movies = ul.find_all("li")
-                for movie in movies:
-                    movies_dict['id'].append(movie.find('div')['data-film-id'])
-                    movies_dict['title'].append(movie.find('img')['alt'])
-                    movies_dict['rating'].append(transform_ratings(movie.find('p', {"class": "poster-viewingdata"}).get_text().strip()))
-                    movies_dict['liked'].append(movie.find('span', {'class': 'like'})!=None)
-                    movies_dict['link'].append(movie.find('div')['data-target-link'])
+    movies_dict = {
+        'id': [],
+        'title': [],
+        'rating': [],
+        'liked': [],
+        'link': [],
+        'img': []
+    }
+    
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page()
+        
+        # Navigate to user's films page
+        url = f"{DOMAIN}/{username}/films/"
+        page.goto(url)
+        
+        # Check for pagination
+        pagination = page.locator("li.paginate-page a")
+        page_count = pagination.nth(-1).inner_text() if pagination.count() > 0 else 1
+        
+        # Scrape each page
+        for i in range(int(page_count)):
+            if i > 0:
+                page.goto(f"{DOMAIN}/{username}/films/page/{i + 1}")
+            
+            # Wait for the poster list to load
+            page.wait_for_selector("ul.poster-list")
+            
+            # Extract movie details
+            movies = page.locator("ul.poster-list li")
+            for j in range(movies.count()):
+                movie = movies.nth(j)
+                print(movie)
+                movie_id = movie.locator("div[data-film-id]").get_attribute("data-film-id")  # Target specific div
+                title = movie.locator("img").get_attribute("alt")
+                rating_element = movie.locator("p.poster-viewingdata").inner_text().strip()
+                liked = movie.locator("span.like").count() > 0
+                link = movie.locator("div[data-film-link]").get_attribute("data-film-link")  # Specific div
+                img = movie.locator("img").get_attribute("src")
+                
+                movies_dict['id'].append(movie_id)
+                movies_dict['title'].append(title)
+                movies_dict['rating'].append(transform_ratings(rating_element))
+                movies_dict['liked'].append(liked)
+                movies_dict['link'].append(link)
+                movies_dict['img'].append(img)
+        
+        browser.close()
 
     df_film = pd.DataFrame(movies_dict)
+    
     return df_film
