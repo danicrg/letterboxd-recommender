@@ -30,7 +30,8 @@ def scrape_user(username):
         'rating': [],
         'liked': [],
         'link': [],
-        'img': []
+        'img': [],
+        'slug': []
     }
     
     with sync_playwright() as p:
@@ -57,9 +58,9 @@ def scrape_user(username):
             movies = page.locator("ul.poster-list li")
             for j in range(movies.count()):
                 movie = movies.nth(j)
-                print(movie)
                 movie_id = movie.locator("div[data-film-id]").get_attribute("data-film-id")  # Target specific div
                 title = movie.locator("img").get_attribute("alt")
+                slug = movie.locator("div[data-film-slug]").get_attribute("data-film-slug")
                 rating_element = movie.locator("p.poster-viewingdata").inner_text().strip()
                 liked = movie.locator("span.like").count() > 0
                 link = movie.locator("div[data-film-link]").get_attribute("data-film-link")  # Specific div
@@ -71,6 +72,7 @@ def scrape_user(username):
                 movies_dict['liked'].append(liked)
                 movies_dict['link'].append(link)
                 movies_dict['img'].append(img)
+                movies_dict['slug'].append(slug)
         
         browser.close()
 
