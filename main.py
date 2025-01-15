@@ -1,31 +1,45 @@
-from data import get_movie_dict_from_df, get_user_data
-from score import jaccard_user_score, cosine_user_score, cross_user_movies_dict_score, n_movies_in_common, scale_ratings
-from graph import build_bipartite_graph, biased_random_walk
+import torch.optim as optim
+from data.data_loader import prepare_graph_data
+from data.data_generation import load_existing_data
+from models.movie_user_model import MovieUserEmbeddingModel
+from utils.batch_sampler import batch_sampler
+import copy
 
-USERNAME = "danicrg"
+# Hyperparameters
+embedding_dim = 32
+hidden_dim = 64
+batch_size = 2048
+num_epochs = 100
 
-if __name__ == "__main__":
-    my_data = get_user_data(USERNAME)
-    users = ["danicrg", "emmaelkmw", "carlotabravo", "jazze", "thomasflight", "kurstboy", "blazques"]
-    other_data = get_user_data("blazques")
+# Load data
+ratings_df, movies_df = load_existing_data()
+graph_data, num_movies, num_users = prepare_graph_data(ratings_df, movies_df, embedding_dim)
 
-    my_movie_dict = get_movie_dict_from_df(my_data)
-    other_movie_dict = get_movie_dict_from_df(other_data)
+# Initialize model and optimizer
+model = MovieUserEmbeddingModel(num_movies, num_users, embedding_dim, hidden_dim)
+optimizer = optim.Adam(model.parameters(), lr=0.01)
 
-    print("n_movies_in_common", n_movies_in_common(my_movie_dict, other_movie_dict))
-    print("Cross_user_score", cross_user_movies_dict_score(my_movie_dict, other_movie_dict))
-    print("Jaccard_user_score", jaccard_user_score(my_movie_dict, other_movie_dict))
-    print("Cosine_user_score", cosine_user_score(my_movie_dict, other_movie_dict))
+# Training
+best_model = None
+min_loss = float('inf')
 
-    user_ratings = {
-        user: get_movie_dict_from_df(get_user_data(user))
-        for user in users
-    }
+for epoch in range(num_epochs):
+    model.train()
+    total_loss = 0
+    for node_features, edge_batch, edge_attr_batch in batch_sampler(graph_data, batch_size):
+        optimizer.zero_grad()
+        predicted_ratings, _ = model(edge_batch, edge_attr_batch)
+        loss = nn.MSELoss()(predicted_ratings, edge_attr_batch)
+        loss.backward()
+        optimizer.step()
+        total_loss += loss.item()
+    if total_loss < min_loss:
+        min_loss = total_loss
+        best_model = copy.deepcopy(model)
+    print(f"Epoch {epoch + 1}, Loss: {total_loss:.4f}")
 
-    graph = build_bipartite_graph(user_ratings)
-    start_user = USERNAME
-    affinity_scores = biased_random_walk(graph, start_user)
-
-    print(f"Affinity Scores for Movies (Biased Random Walk from {start_user}):")
-    for movie, score in sorted(affinity_scores.items(), key=lambda x: x[1], reverse=True)[:10]:
-        print(f"{movie}: {score}")
+# Save final embeddings
+best_model.eval()
+with torch.no_grad():
+    _, final_embeddings = best_model(graph_data.edge_index, graph_data.edge_attr)
+torch.save(final_embeddings, 'final_embeddings.pt')
