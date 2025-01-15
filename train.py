@@ -1,3 +1,5 @@
+import os
+
 import torch
 import torch.optim as optim
 import torch.nn as nn
@@ -6,6 +8,7 @@ from data.data_generation import load_existing_data
 from models.movie_user_model import MovieUserEmbeddingModel
 from utils.batch_sampler import batch_sampler
 import copy
+from constants import DATA_PATH
 
 # Hyperparameters
 embedding_dim = 32
@@ -45,4 +48,5 @@ for epoch in range(num_epochs):
 best_model.eval()
 with torch.no_grad():
     _, final_embeddings = best_model(graph_data.edge_index, graph_data.edge_attr)
-torch.save(final_embeddings, 'final_embeddings.pt')
+
+torch.save(final_embeddings, os.path.join(DATA_PATH, 'final_embeddings.pt'))

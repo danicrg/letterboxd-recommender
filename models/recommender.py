@@ -1,4 +1,9 @@
 import random
+from constants import DATA_PATH
+import torch
+import os
+
+final_embeddings = torch.load(os.path.join(DATA_PATH, "final_embeddings.pt"))
 
 movie_embeddings = final_embeddings[:num_movies]
 user_embeddings = final_embeddings[num_movies:]
