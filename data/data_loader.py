@@ -2,7 +2,7 @@ import torch
 import pandas as pd
 from torch_geometric.data import Data
 
-def prepare_graph_data(ratings_df, movies_df, embedding_dim):
+def prepare_graph_data(ratings_df, movies_df, embedding_dim):    
     num_movies = len(movies_df)
     num_users = len(ratings_df['username'].drop_duplicates())
     

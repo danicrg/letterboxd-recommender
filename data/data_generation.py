@@ -2,10 +2,10 @@ from playwright.sync_api import sync_playwright
 import pandas as pd
 from collections import deque
 import os
+from constants import DATA_PATH
 
 DOMAIN = "https://letterboxd.com"
 
-DATA_PATH = "/Users/danicrg/Documents/Coding/ltbxd/data/"
 RATINGS_FILE = os.path.join(DATA_PATH, "ratings.parquet")
 MOVIES_FILE = os.path.join(DATA_PATH, "movies.parquet")
 SCRAPED_USERS_FILE = os.path.join(DATA_PATH, "scraped_users.txt")

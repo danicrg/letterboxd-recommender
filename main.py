@@ -15,7 +15,8 @@ num_epochs = 100
 
 # Load data
 ratings_df, movies_df = load_existing_data()
-graph_data, num_movies, num_users = prepare_graph_data(ratings_df, movies_df, embedding_dim)
+ratings_df_no_empty_ratings = ratings_df[ratings_df["rating"] != -1]
+graph_data, num_movies, num_users = prepare_graph_data(ratings_df_no_empty_ratings, movies_df, embedding_dim)
 
 # Initialize model and optimizer
 model = MovieUserEmbeddingModel(num_movies, num_users, embedding_dim, hidden_dim)

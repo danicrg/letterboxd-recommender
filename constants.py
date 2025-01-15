@@ -1,0 +1,1 @@
+DATA_PATH = "/Users/danicrg/Documents/Coding/ltbxd/data/"
