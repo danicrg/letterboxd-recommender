@@ -140,32 +140,35 @@ def save_data(ratings_df, movies_df):
     ratings_df.to_parquet(RATINGS_FILE, index=False)
     movies_df.to_parquet(MOVIES_FILE, index=False)
 
+def bfs_scrape(seed_user):
+    """
+    Scraping using BFS from the users that recently reviewed the recent movies of the seed user
+    """
+    # Load existing data
+    ratings_df, movies_df = load_existing_data()
+    q = deque([seed_user])
 
-# Load existing data
-ratings_df, movies_df = load_existing_data()
+    while q:
+        username = q.popleft()
+        
+        df_user, df_film = scrape_user(username)
+        
+        # Explore recent reviewers for each film the user has watched
+        for film_slug in df_film.slug.tolist():
+            # Keep the queue from ballooning too large
+            if len(q) > 10:
+                break
+            recent_users = get_recent_reviews_users(film_slug)
+            for user in recent_users:
+                q.append(user)
+        
+        # Combine scraped data with our master DataFrames
+        ratings_df = pd.concat([ratings_df, df_user]).drop_duplicates().reset_index(drop=True)
+        movies_df = pd.concat([movies_df, df_film]).drop_duplicates().reset_index(drop=True)
+        
+        # Save updated data and user list
+        save_data(ratings_df, movies_df)
+        print(f"Number of movies: {len(movies_df)}")
+        print(f"Number of ratings: {len(ratings_df)}")
 
-start_user = "danicrg"
-q = deque([start_user])
 
-while q:
-    username = q.popleft()
-    
-    df_user, df_film = scrape_user(username)
-    
-    # Explore recent reviewers for each film the user has watched
-    for film_slug in df_film.slug.tolist():
-        # Keep the queue from ballooning too large
-        if len(q) > 10:
-            break
-        recent_users = get_recent_reviews_users(film_slug)
-        for user in recent_users:
-            q.append(user)
-    
-    # Combine scraped data with our master DataFrames
-    ratings_df = pd.concat([ratings_df, df_user]).drop_duplicates().reset_index(drop=True)
-    movies_df = pd.concat([movies_df, df_film]).drop_duplicates().reset_index(drop=True)
-    
-    # Save updated data and user list
-    save_data(ratings_df, movies_df)
-    print(f"Number of movies: {len(movies_df)}")
-    print(f"Number of ratings: {len(ratings_df)}")

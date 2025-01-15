@@ -1,4 +1,6 @@
+import torch
 import torch.optim as optim
+import torch.nn as nn
 from data.data_loader import prepare_graph_data
 from data.data_generation import load_existing_data
 from models.movie_user_model import MovieUserEmbeddingModel
