@@ -9,3 +9,4 @@ I will use this data to compare and implement different recommendation algorithm
 ## Backlog
 - Re-scrape user if last data too old. Can also always check that we have the user's latest movies and just scrap the latest
 - Constants for data paths and such
+- Testing the graph model embedding quality
