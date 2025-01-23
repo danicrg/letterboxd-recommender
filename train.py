@@ -17,7 +17,7 @@ embedding_dim = 32
 hidden_dim = 64
 batch_size = 2048
 num_epochs = 100000
-early_stopping_steps = 300
+early_stopping_steps = 500
 
 # Load data
 ratings_df, movies_df = load_existing_data()
@@ -40,7 +40,8 @@ no_improvement_steps = 0
 
 for epoch in range(num_epochs):
     model.train()
-    total_loss = 0
+    total_sum = 0.0
+    total_count = 0
 
     for node_features, edge_batch, edge_attr_batch in batch_sampler(graph_data, batch_size):
         optimizer.zero_grad()
@@ -48,8 +49,10 @@ for epoch in range(num_epochs):
         loss = nn.MSELoss()(predicted_ratings, edge_attr_batch)
         loss.backward()
         optimizer.step()
-        total_loss += loss.item()
+        total_sum += loss.item() * edge_attr_batch.shape[0]
+        total_count += edge_attr_batch.shape[0]
 
+    total_loss = total_sum / total_count
     # Check for improvement
     if total_loss < min_loss:
         min_loss = total_loss
