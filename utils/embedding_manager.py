@@ -30,4 +30,4 @@ class EmbeddingManager:
         top_movie_indices = torch.topk(similarities, top_n).indices.tolist()  # Convert to list of Python integers
 
         # Retrieve the top movies
-        return [self.movies_df.iloc[idx]['slug'] for idx in top_movie_indices]
+        return [self.movies_df.iloc[idx]['title'] for idx in top_movie_indices]

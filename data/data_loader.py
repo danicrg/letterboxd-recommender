@@ -2,6 +2,38 @@ import torch
 import pandas as pd
 from torch_geometric.data import Data
 
+def train_test_split(ratings_df, movies_df, test_ratio=0.2):
+    grouped = ratings_df.groupby("username")
+    train_records = []
+    test_records = []
+
+    for user, group in grouped:
+        user_data = group.sample(frac=1.0)
+
+        num_test = max(1, int(len(user_data) * test_ratio))
+        
+        user_test = user_data.iloc[:num_test]
+        user_train = user_data.iloc[num_test:]
+
+        if len(user_train) == 0:
+            user_train = user_test.iloc[:1]
+            user_test = user_test.iloc[1:]
+
+        train_records.append(user_train)
+        test_records.append(user_test)
+
+    train_ratings_df = pd.concat(train_records, ignore_index=True)
+    test_ratings_df = pd.concat(test_records, ignore_index=True)
+
+    train_movies = train_ratings_df["slug"].drop_duplicates().tolist()
+    test_movies = test_ratings_df["slug"].drop_duplicates().tolist()
+
+    train_movies_df = movies_df[movies_df["slug"].isin(train_movies)]
+    test_movies_df = movies_df[movies_df["slug"].isin(test_movies)]
+
+    return train_ratings_df, test_ratings_df, train_movies_df, test_movies_df
+
+
 def preprocess_dfs(ratings_df, movies_df, min_movie_presence=3):
     # Remove unusable data
     ratings_df = ratings_df[ratings_df["rating"] != -1]

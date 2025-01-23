@@ -3,8 +3,9 @@ import os
 import torch
 import torch.optim as optim
 import torch.nn as nn
-from data.data_loader import prepare_graph_data, preprocess_dfs
+from data.data_loader import prepare_graph_data, preprocess_dfs, train_test_split
 from data.data_generation import load_existing_data
+
 from models.movie_user_model import MovieUserEmbeddingModel
 
 from utils.embedding_manager import EmbeddingManager
@@ -17,13 +18,16 @@ embedding_dim = 32
 hidden_dim = 64
 batch_size = 2048
 num_epochs = 100000
-early_stopping_steps = 500
+early_stopping_steps = 100
 
 # Load data
 ratings_df, movies_df = load_existing_data()
 print(f"Before processing: len(ratings_df): {len(ratings_df)} - len(movies_df): {len(movies_df)}")
 ratings_df, movies_df = preprocess_dfs(ratings_df, movies_df, min_movie_presence=3)
 print(f"After processing: len(ratings_df): {len(ratings_df)} - len(movies_df): {len(movies_df)}")
+
+train_ratings_df, test_ratings_df, train_movies_df, test_movies_df = train_test_split(ratings_df, movies_df, test_ratio=0.2)
+
 graph_data, index_mappings = prepare_graph_data(ratings_df, movies_df, embedding_dim)
 
 num_movies = len(index_mappings["movies"])
@@ -65,7 +69,7 @@ for epoch in range(num_epochs):
 
     # Check if early stopping criterion is met
     if no_improvement_steps >= early_stopping_steps:
-        model.load_state_dict(best_model_state_dict)
+        # model.load_state_dict(best_model_state_dict)
         no_improvement_steps = 0
 
         if batch_size >= graph_data.edge_index.size(1):
@@ -73,7 +77,7 @@ for epoch in range(num_epochs):
             break
         
         batch_size *=2
-        early_stopping_steps = min(500, early_stopping_steps + 150)
+        early_stopping_steps = min(300, early_stopping_steps + 50)
         print(f"Increasing batch size to {batch_size}")
             
 
