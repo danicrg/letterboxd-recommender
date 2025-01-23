@@ -133,7 +133,7 @@ def load_existing_data():
         movies_df = pd.read_parquet(MOVIES_FILE)[['title', 'link', 'img', 'slug']]
     else:
         movies_df = pd.DataFrame(columns=['title', 'link', 'img', 'slug'])    
-    return ratings_df, movies_df
+    return ratings_df.drop_duplicates(), movies_df.drop_duplicates()
 
 
 def save_data(ratings_df, movies_df):
